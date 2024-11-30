@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 
 
 
-# Varsayılan stili kullanmak için
-plt.style.use('default')
 
 class MACDBacktester():
     def __init__(self, symbol, EMA_S, EMA_L, signal_mw, start, end, tc):
@@ -79,7 +77,7 @@ class MACDBacktester():
 
 def plot_macd_strategy(data):
     plt.figure(figsize=(12, 8))
-    plt.style.use('seaborn')
+    plt.style.use('default')
     
     plt.subplot(2, 1, 1)
     plt.title('Price and Buy/Sell Signals', fontsize=15, fontweight='bold')
