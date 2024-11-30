@@ -5,6 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
+
+
+
+# Varsayılan stili kullanmak için
+plt.style.use('default')
+
 class MACDBacktester():
     def __init__(self, symbol, EMA_S, EMA_L, signal_mw, start, end, tc):
         self.symbol = symbol
