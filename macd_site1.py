@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 class MACDBacktester():
-    ''' Class for the vectorized backtesting of MACD-based trading strategies. '''
-    
     def __init__(self, symbol, EMA_S, EMA_L, signal_mw, start, end, tc):
         self.symbol = symbol
         self.EMA_S = EMA_S
@@ -20,11 +18,17 @@ class MACDBacktester():
         self.get_data()
         
     def get_data(self):
-        ''' Retrieves and prepares the data. '''
         try:
             raw = yf.download(tickers=self.symbol, start=self.start, end=self.end, interval='1d')
-            raw = raw["Adj Close"].to_frame().dropna()
-            raw.rename(columns={"Adj Close": "price"}, inplace=True)
+            
+            if isinstance(raw, pd.DataFrame):
+                if 'Adj Close' in raw.columns:
+                    raw = raw['Adj Close']
+            
+            raw = pd.DataFrame(raw)
+            raw.columns = ['price'] if len(raw.columns) > 0 else ['price']
+            
+            raw = raw.dropna()
             raw["returns"] = np.log(raw / raw.shift(1))
             raw["EMA_S"] = raw["price"].ewm(span=self.EMA_S, min_periods=self.EMA_S).mean() 
             raw["EMA_L"] = raw["price"].ewm(span=self.EMA_L, min_periods=self.EMA_L).mean()
@@ -36,7 +40,6 @@ class MACDBacktester():
             self.data = None
 
     def test_strategy(self):
-        ''' Backtests the trading strategy. '''
         if self.data is None:
             return None
         
@@ -59,7 +62,6 @@ class MACDBacktester():
         return round(perf, 6), round(outperf, 6)
     
     def list_last_buy_signals(self):
-        ''' Lists buy signal if MACD crosses above MACD Signal on the last day. '''
         if self.results is None or len(self.results) < 2:
             return None
 
@@ -70,23 +72,19 @@ class MACDBacktester():
             return None
 
 def plot_macd_strategy(data):
-    ''' Create a matplotlib plot of MACD strategy performance. '''
     plt.figure(figsize=(12, 8))
-    plt.style.use('seaborn')  # Modern style
+    plt.style.use('seaborn')
     
-    # Price plot
     plt.subplot(2, 1, 1)
     plt.title('Price and Buy/Sell Signals', fontsize=15, fontweight='bold')
     plt.plot(data.index, data['price'], label='Price', color='blue')
     
-    # Buy and Sell signals
     buy_signals = data[data['position'] == 1]
     sell_signals = data[data['position'] == -1]
     plt.scatter(buy_signals.index, buy_signals['price'], color='green', label='Buy', marker='^', s=100)
     plt.scatter(sell_signals.index, sell_signals['price'], color='red', label='Sell', marker='v', s=100)
     plt.legend()
     
-    # MACD plot
     plt.subplot(2, 1, 2)
     plt.title('MACD and Signal Line', fontsize=15, fontweight='bold')
     plt.plot(data.index, data['MACD'], label='MACD', color='blue')
@@ -97,7 +95,6 @@ def plot_macd_strategy(data):
     return plt
 
 def analyze_all_stocks(bist_symbols, ema_short, ema_long, signal_mw, start, end, transaction_cost):
-    ''' Analyzes all stocks and lists buy signals. '''
     buy_signals = []
     progress_bar = st.progress(0)
     for i, symbol in enumerate(bist_symbols):
@@ -117,7 +114,6 @@ def analyze_all_stocks(bist_symbols, ema_short, ema_long, signal_mw, start, end,
                 if last_signal is not None:
                     buy_signals.append((symbol, last_signal["price"]))
             
-            # Update progress bar
             progress_bar.progress((i + 1) / len(bist_symbols))
         except Exception as e:
             st.warning(f"Error analyzing {symbol}: {e}")
@@ -126,14 +122,12 @@ def analyze_all_stocks(bist_symbols, ema_short, ema_long, signal_mw, start, end,
     return buy_signals
 
 def main():
-    # Custom Streamlit page configuration
     st.set_page_config(
         page_title="MACD Backtester",
         page_icon="📈",
         layout="wide"
     )
 
-    # Custom CSS for improved UI
     st.markdown("""
     <style>
     .reportview-container {
@@ -162,35 +156,25 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # BIST 100 Stocks (same as before)
     bist_100_symbols = [
-        # Önceki sembollerin tamamı buraya gelecek
-        'AEFES.IS', 'AGHOL.IS', 'AKBNK.IS', 'AKCNS.IS', 'AKENR.IS', 'AKFGY.IS', 'AKGRT.IS', 'AKSA.IS', 'AKSEN.IS',
-    'ALARK.IS', 'ALBRK.IS', 'ALCAR.IS', 'ALGYO.IS', 'ARCLK.IS', 'ASELS.IS', 'AGESA.IS', 'AYDEM.IS', 'AYGAZ.IS',
-    'BIMAS.IS', 'BIOEN.IS', 'BRISA.IS', 'CANTE.IS', 'CCOLA.IS', 'CEMTS.IS', 'CIMSA.IS', 'COSMO.IS', 'DEVA.IS',
-    'DOAS.IS', 'DOGUB.IS', 'DOHOL.IS', 'DOKTA.IS', 'DURDO.IS', 'ECILC.IS', 'EGEEN.IS', 'EKGYO.IS', 'ENJSA.IS',
-    'ERBOS.IS', 'EREGL.IS', 'ESEN.IS', 'FENER.IS', 'FROTO.IS', 'GENIL.IS', 'GESAN.IS', 'GOZDE.IS', 'GUBRF.IS',
-    'GWIND.IS', 'HEKTS.IS', 'HLGYO.IS', 'ICBCT.IS', 'IHLGM.IS', 'INDES.IS', 'INVEO.IS', 'ISCTR.IS', 'ISFIN.IS',
-    'ISMEN.IS', 'ITTFH.IS', 'KARSN.IS', 'KARTN.IS', 'KCHOL.IS', 'KERVT.IS', 'KORDS.IS', 'KONTR.IS', 'KOZAA.IS',
-    'KOZAL.IS', 'KRDMD.IS', 'LOGO.IS', 'MAVI.IS', 'MGROS.IS', 'MPARK.IS', 'NETAS.IS', 'ODAS.IS', 'OTKAR.IS',
-    'PARSN.IS', 'PEGYO.IS', 'PETKM.IS', 'PGSUS.IS', 'PRKME.IS', 'QUAGR.IS', 'SAHOL.IS', 'SASA.IS', 'SELEC.IS',
-    'SOKM.IS', 'SNGYO.IS', 'TAVHL.IS', 'TMSN.IS', 'TOASO.IS', 'TRILC.IS', 'TRKCM.IS', 'TSKB.IS', 'TTKOM.IS',
-    'TTRAK.IS', 'TUPRS.IS', 'ULKER.IS', 'VAKBN.IS', 'VESTL.IS', 'VESBE.IS', 'VKGYO.IS', 'YATAS.IS', 'YKBNK.IS',
-    'ZOREN.IS']
+        # BIST 100 sembolleri buraya gelecek
+        'AEFES.IS', 'AKBNK.IS', 'ARCLK.IS', 'ASELS.IS', 'BIMAS.IS', 
+        'DOAS.IS', 'ENJSA.IS', 'GOZDE.IS', 'HEKTS.IS', 'KCHOL.IS', 
+        'KOZAA.IS', 'MGROS.IS', 'PETKM.IS', 'SAHOL.IS', 'SASA.IS', 
+        'TAVHL.IS', 'TCELL.IS', 'THYAO.IS', 'TKFEN.IS', 'TOASO.IS',
+        'TTKOM.IS', 'TTRAK.IS', 'TUPRS.IS', 'ULKER.IS', 'YKBNK.IS'
+    ]
 
     st.title("📈 BIST 100 MACD Backtester")
 
-    # Sidebar
     st.sidebar.header("Strategy Parameters")
     
-    # Stock Selection
     selected_symbol = st.sidebar.selectbox(
         "Select Stock", 
         bist_100_symbols, 
         help="Choose a stock from BIST 100 index to analyze"
     )
 
-    # Strategy Parameters
     col1, col2, col3 = st.sidebar.columns(3)
     with col1:
         ema_short = st.number_input('Short EMA', value=12, min_value=1, help='Shorter EMA period')
@@ -199,11 +183,9 @@ def main():
     with col3:
         signal_mw = st.number_input('Signal MW', value=9, min_value=1, help='Signal line period')
 
-    # Date Range
     start_date = st.sidebar.date_input('Start Date', datetime.now() - timedelta(days=365))
     end_date = st.sidebar.date_input('End Date', datetime.now())
 
-    # Transaction Cost
     transaction_cost = st.sidebar.slider(
         'Transaction Cost (%)', 
         min_value=0.0, 
@@ -213,14 +195,12 @@ def main():
         help='Cost per trade as a percentage'
     )
 
-    # Action Buttons
     col1, col2 = st.sidebar.columns(2)
     with col1:
         backtest_btn = st.sidebar.button('Run Backtest 🚀')
     with col2:
         analyze_all_btn = st.sidebar.button('Analyze All Stocks 🔍')
 
-    # Main Analysis Area
     if backtest_btn:
         with st.spinner('Running Backtest...'):
             macd_backtester = MACDBacktester(
